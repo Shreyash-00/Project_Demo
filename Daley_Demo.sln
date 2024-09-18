@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.34902.97
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Daley_Demo", "Daley_Demo\Daley_Demo.csproj", "{65943A55-F0B2-43B4-ABB1-8929B7F11BA5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Daley_Demo.API", "Daley_Demo.API\Daley_Demo.API.csproj", "{0F4CFE56-8998-4D29-B00E-AB757893AA8D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{65943A55-F0B2-43B4-ABB1-8929B7F11BA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65943A55-F0B2-43B4-ABB1-8929B7F11BA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65943A55-F0B2-43B4-ABB1-8929B7F11BA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65943A55-F0B2-43B4-ABB1-8929B7F11BA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0F4CFE56-8998-4D29-B00E-AB757893AA8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F4CFE56-8998-4D29-B00E-AB757893AA8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F4CFE56-8998-4D29-B00E-AB757893AA8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F4CFE56-8998-4D29-B00E-AB757893AA8D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EBEC1ABF-A6A7-4146-8F98-51BD0AD45270}
+	EndGlobalSection
+EndGlobal
