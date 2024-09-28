@@ -1,0 +1,238 @@
+﻿@{
+    ViewBag.Title = "Chart Configuration";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart Configuration</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Chart Configuration</h1>
+
+    <div>
+        <label for="chartHeading">Chart Heading</label>
+        <input type="text" id="chartHeading" />
+
+        <label for="deviceType">Device Type</label>
+        <select id="deviceType"></select>
+
+        <label for="chartType">Chart Type</label>
+        <select id="chartType">
+            <option value="line">Line</option>
+            <option value="bar">Bar</option>
+            <option value="scatter">Scatter</option>
+        </select>
+
+        <label for="fields">Fields</label>
+        <input type="text" id="fields" placeholder="Enter comma-separated fields" />
+
+        <label for="label">Label</label>
+        <input type="text" id="label" />
+
+        <label for="color">Color</label>
+        <input type="color" id="color" />
+
+        <label for="xAxisLabel">X Axis Label</label>
+        <input type="text" id="xAxisLabel" />
+
+        <label for="yAxisLabel">Y Axis Label</label>
+        <input type="text" id="yAxisLabel" />
+
+        <button id="saveChartConfig">Save Chart Configuration</button>
+    </div>
+
+    <h2>Saved Chart Configurations</h2>
+    <ul id="savedConfigs"></ul>
+
+    <!-- Chart Preview Section -->
+    <div id="chartPreviewSection" style="display:none;">
+        <h2>Chart Preview</h2>
+        <div id="chartPreviewContainer"></div>
+        <button id="closePreviewButton">Close Preview</button>
+    </div>
+
+ 
+
+
+
+<script>
+    let charts = [];
+
+    // Function to display the chart preview
+    function displayChartPreview(chartConfig) {
+        // Ensure the chartConfig has Options with valid properties
+
+        const options = chartConfig.Options || {};
+        const label = options.Label || "No Label";
+        const color = options.Color || "#000000";
+        const xAxisLabel = options.XAxisLabel || "X Axis";
+        const yAxisLabel = options.YAxisLabel || "Y Axis";
+
+        // Destroy any existing chart instances
+        if (charts.length > 0) {
+            charts.forEach(chart => chart.destroy());
+            charts = [];
+        }
+
+        // Clear the preview container
+        $('#chartPreviewContainer').empty();
+
+        // Create a canvas element for the new chart preview
+        var chartHtml = `<canvas id="previewChart" width="400" height="200"></canvas>`;
+        $('#chartPreviewContainer').append(chartHtml);
+
+        var ctx = document.getElementById('previewChart').getContext('2d');
+
+        // Use the saved Fields array for X-axis labels
+        var labels = chartConfig.Fields || ["Field1", "Field2"];  // Placeholder if Fields are missing
+
+        // Create the dataset using saved Options and Fields
+        var dataset = {
+            label: label, // Use the saved Label from Options
+            data: chartConfig.Fields.map(field => Math.random() * 100), // Placeholder data, replace with actual data as needed
+            backgroundColor: color, // Use the saved Color from Options
+            borderColor: color,
+            fill: false
+        };
+
+        // Create the chart
+        var previewChart = new Chart(ctx, {
+            type: chartConfig.ChartType,  // Use the saved chart type
+            data: {
+                labels: labels,  // X-axis labels from saved fields
+                datasets: [dataset]  // Y-axis data from the saved dataset
+            },
+            options: {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: xAxisLabel  // Use the saved X-axis label
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: yAxisLabel  // Use the saved Y-axis label
+                        }
+                    }
+                }
+            }
+        });
+
+        charts.push(previewChart);
+
+        // Show the preview section
+        $('#chartPreviewSection').show();
+    }
+
+    // Function to load saved configurations from the API
+    function loadSavedConfigurations() {
+        $.ajax({
+            type: 'GET',
+            url: 'https://localhost:44305/api/chartconfigs',
+            success: function (data) {
+                $('#savedConfigs').empty();
+                data.forEach(config => {
+                    $('#savedConfigs').append(`
+                    <li>
+                        ${config.ChartHeading} (${config.ChartType})
+                        <button onclick="loadSavedConfiguration(${config.ID})">Preview</button>
+                    </li>
+                `);
+                });
+            },
+            error: function (xhr, status, error) {
+                console.error('Error fetching saved configurations: ', error);
+            }
+        });
+    }
+
+    // Function to load a saved configuration by ID and display the preview
+    function loadSavedConfiguration(id) {
+        $.ajax({
+            type: 'GET',
+            url: `https://localhost:44305/api/chartconfigs/${id}`,
+            success: function (data) {
+                displayChartPreview(data); // Display chart preview using the retrieved data
+            },
+            error: function (xhr, status, error) {
+                console.error('Error fetching saved configuration: ', error);
+            }
+        });
+    }
+
+    // Function to save the chart configuration
+    $('#saveChartConfig').click(function () {
+        const chartConfig = {
+            ChartHeading: $('#chartHeading').val(),
+            DeviceTypeName: $('#deviceType').val(),
+            ChartType: $('#chartType').val(),
+            Fields: $('#fields').val().split(','), // Convert comma-separated fields into an array
+            Options: {
+                Label: $('#label').val(),
+                Color: $('#color').val(),
+                XAxisLabel: $('#xAxisLabel').val(),
+                YAxisLabel: $('#yAxisLabel').val()
+            },
+            Status: 1 // Assume it's active by default
+        };
+
+        $.ajax({
+            type: 'POST',
+            url: 'https://localhost:44305/api/chartconfigs',
+            data: JSON.stringify(chartConfig),
+            contentType: 'application/json',
+            success: function () {
+                alert('Chart configuration saved successfully!');
+                loadSavedConfigurations(); // Refresh the saved configurations list
+            },
+            error: function (xhr, status, error) {
+                console.error('Error saving chart configuration: ', error);
+            }
+        });
+    });
+
+    // Close the chart preview
+    $('#closePreviewButton').click(function () {
+        if (charts.length > 0) {
+            charts.forEach(chart => chart.destroy());
+            charts = [];
+        }
+
+        $('#chartPreviewContainer').empty();
+        $('#chartPreviewSection').hide();
+    });
+
+    // Load device types for the dropdown
+    function loadDeviceTypes() {
+        $.ajax({
+            type: 'GET',
+            url: 'https://localhost:44305/api/devicetypes',
+            success: function (data) {
+                $('#deviceType').empty();
+                data.forEach(deviceType => {
+                    $('#deviceType').append(`<option value="${deviceType.DeviceTypeName}">${deviceType.DeviceTypeName}</option>`);
+                });
+            },
+            error: function (xhr, status, error) {
+                console.error('Error fetching device types: ', error);
+            }
+        });
+    }
+
+    // Initialize the page by loading saved configurations and device types
+    $(document).ready(function () {
+        loadSavedConfigurations();
+        loadDeviceTypes();
+    });
+
+</script>
+</body>
+</html>

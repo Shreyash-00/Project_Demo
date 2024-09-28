@@ -1,0 +1,185 @@
+﻿
+@{
+    ViewBag.Title = "Telemetry Visualization";
+}
+
+<h2>Telemetry Visualization</h2>
+
+<!-- Device Type Dropdown -->
+<div>
+    <label for="deviceTypeDropdown">Select Device Type:</label>
+    <select id="deviceTypeDropdown">
+        <option value="">--Select Device Type--</option>
+        <!-- Options will be populated by JavaScript -->
+    </select>
+</div>
+
+<!-- Fields and Chart Type Section -->
+<div>
+    <h4>Select Fields, Chart Types, and Customize:</h4>
+    <div id="fieldSelectionContainer">
+        <!-- Dynamic fields, chart type selectors, and color pickers will be appended here -->
+    </div>
+</div>
+
+<!-- Fetch Data Button -->
+<button id="fetchDataButton">Fetch Data</button>
+
+<!-- Container for Multiple Charts -->
+<div id="chartsContainer"></div>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+
+@section Scripts {
+    <script>
+        // Track created charts to destroy them if needed
+        let charts = [];
+
+        $(document).ready(function () {
+            // Populate Device Type Dropdown
+            $.get('https://localhost:44305/api/telemetry/deviceTypes', function (data) {
+                $.each(data, function (index, deviceType) {
+                    $('#deviceTypeDropdown').append(`<option value="${deviceType}">${deviceType}</option>`);
+                });
+            });
+
+            // On Device Type Change - Fetch Fields
+            $('#deviceTypeDropdown').change(function () {
+                var selectedType = $(this).val();
+                var fieldSelectionContainer = $('#fieldSelectionContainer');
+                fieldSelectionContainer.empty(); // Clear previous fields
+
+                if (selectedType) {
+                    $.ajax({
+                        type: 'POST',
+                        url: 'https://localhost:44305/api/telemetry/fields',
+                        contentType: 'application/json',
+                        data: JSON.stringify(selectedType), // Send the selected device type
+                        success: function (data) {
+                            var parsedData = JSON.parse(data[0]); // Assuming data is an array with one JSON string
+                            $.each(parsedData, function (key, value) {
+                                // Create field and chart type selection with color picker and label input
+                                var fieldHtml = `
+                                            <div class="field-chart-selection">
+                                                <label>${key}</label>
+                                                <select class="chartTypeDropdown">
+                                                    <option value="line">Line</option>
+                                                    <option value="bar">Bar</option>
+                                                    
+                                                    <option value="scatter">Scatter</option>
+                                                </select>
+                                                <input type="color" class="colorPicker" value="#${Math.floor(Math.random() * 16777215).toString(16)}">
+                                                <input type="text" class="labelInput" placeholder="Enter label (optional)" value="${key}">
+                                            </div>
+                                        `;
+                                fieldSelectionContainer.append(fieldHtml);
+                            });
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('Error fetching fields: ', error);
+                        }
+                    });
+                } else {
+                    fieldSelectionContainer.empty(); // Clear fields if no device type is selected
+                }
+            });
+
+            // Fetch data and display chart(s) when button is clicked
+            $('#fetchDataButton').click(function () {
+                var selectedFields = [];
+                var chartTypes = [];
+                var colors = [];
+                var labels = [];
+
+                $('#fieldSelectionContainer .field-chart-selection').each(function () {
+                    var field = $(this).find('label').text();
+                    var chartType = $(this).find('.chartTypeDropdown').val();
+                    var color = $(this).find('.colorPicker').val();
+                    var label = $(this).find('.labelInput').val();
+
+                    selectedFields.push(field);
+                    chartTypes.push(chartType);
+                    colors.push(color);
+                    labels.push(label || field); // Use custom label if provided, else use field name
+                });
+
+                var deviceTypeName = $('#deviceTypeDropdown').val();
+
+                if (!selectedFields || selectedFields.length === 0 || !deviceTypeName) {
+                    alert("Please select a device type and at least one field.");
+                    return;
+                }
+
+                var requestData = { DeviceTypeName: deviceTypeName, SelectedFields: selectedFields };
+
+                $.ajax({
+                    type: 'POST',
+                    url: 'https://localhost:44305/api/telemetry/data',
+                    data: JSON.stringify(requestData),
+                    contentType: 'application/json',
+                    success: function (data) {
+                        // Clear the previous charts if they exist
+                        $('#chartsContainer').empty();
+                        charts.forEach(chart => chart.destroy()); // Destroy previous charts
+                        charts = []; // Clear chart references
+
+                        selectedFields.forEach(function (field, index) {
+                            // Create a new canvas element for each chart
+                            var chartHtml = `<canvas id="chart-${index}" width="400" height="200"></canvas>`;
+                            $('#chartsContainer').append(chartHtml);
+
+                            var ctx = document.getElementById(`chart-${index}`).getContext('2d');
+
+                            // Process the data for Chart.js
+                            var dataset = {
+                                label: labels[index], // Use the user-defined label
+                                data: data.map(row => parseFloat(row[field])), // Convert string to a number
+                                backgroundColor: colors[index], // Use the user-selected color
+                                borderColor: colors[index], // Use the same color for the border
+                                fill: false
+                            };
+
+                            var labelsData = data.map(row => row.Timestamp || ''); // Use 'Timestamp' if available, else empty string
+
+                            var newChart = new Chart(ctx, {
+                                type: chartTypes[index], // Use the selected chart type for this field
+                                data: {
+                                    labels: labelsData, // X-axis (could be time or index)
+                                    datasets: [dataset] // Y-axis data (field values)
+                                },
+                                options: {
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true
+                                        }
+                                    },
+                                    plugins: {
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function (tooltipItem) {
+                                                    return tooltipItem.dataset.label + ': ' + tooltipItem.raw;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+
+                            // Save the chart reference so it can be destroyed later
+                            charts.push(newChart);
+                        });
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error fetching data: ', error);
+                    }
+                });
+            });
+        });
+    </script>
+}
